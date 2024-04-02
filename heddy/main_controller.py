@@ -2,6 +2,7 @@ import os
 from heddy.ai_backend.zapier_manager import ZapierManager
 from heddy.application_event import ApplicationEvent, ApplicationEventType, ProcessingStatus
 from heddy.io.sound_effects_player import AudioPlayer
+from heddy.speech_to_text.faster_whisper_transcriber import WhisperTranscriber
 from heddy.speech_to_text.stt_manager import STTManager
 from heddy.text_to_speech.text_to_speach_manager import TTSManager
 from heddy.word_detector import WordDetector
@@ -12,6 +13,7 @@ from heddy.text_to_speech.eleven_labs import ElevenLabsManager
 from heddy.vision_module import VisionModule
 import openai
 from dotenv import load_dotenv
+import argparse
 
 
 class MainController:
@@ -193,7 +195,7 @@ class MainController:
         return current_event
         
 
-def initialize():
+def initialize(args):
     load_dotenv()
     print("System initializing...")
     # Initialize OpenAI client ok computer send a little zapier tick please reply
@@ -201,9 +203,13 @@ def initialize():
         api_key=os.getenv("OPENAI_API_KEY")
     ) # This line initializes openai_client with the openai library itself
 
-    # Initialize modules with provided API keys
-    assemblyai_transcriber = AssemblyAITranscriber(api_key=os.getenv("ASSEMBLYAI_API_KEY"))
 
+    # Initialize modules with provided API keys
+    if args.transcriber.lower() == "whisper":
+        transcriber = WhisperTranscriber() 
+    if args.transcriber.lower() == "assemblyai":
+        transcriber = AssemblyAITranscriber(api_key=os.getenv("ASSEMBLYAI_API_KEY"))
+    
     # Adjusted to use the hardcoded Assistant ID
     eleven_labs_manager = ElevenLabsManager(api_key=os.getenv("ELEVENLABS_API_KEY"))
     vision_module = VisionModule(openai_api_key=os.getenv("OPENAI_API_KEY"))
@@ -215,13 +221,19 @@ def initialize():
     word_detector = WordDetector()
     return MainController(
         assistant=streaming_manager,
-        transcriber=STTManager(transcriber=assemblyai_transcriber),
+        transcriber=STTManager(transcriber=transcriber),
         vision_module=vision_module,
         audio_player=AudioPlayer(),
         word_detector=word_detector,
         synthesizer=TTSManager(eleven_labs_manager)
     )
 
+def parse_cli_args(argv=None):
+    parser = argparse.ArgumentParser("heddy")
+    parser.add_argument("--transcriber", type=str, default="assemblyai")
+    return parser.parse_args(argv)
+
 if __name__ == "__main__":
-    main = initialize()
+    args = parse_cli_args()
+    main = initialize(args)
     main.run(ApplicationEvent(ApplicationEventType.START))
