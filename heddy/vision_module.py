@@ -5,6 +5,13 @@ import uuid
 import threading
 import requests
 
+image_description = ""
+
+def process_image(image_path):
+    global image_description
+    # Your existing code to process the image and generate the description
+    image_description = generated_description
+
 class VisionModule:
     def __init__(self, openai_api_key):
         self.api_key = openai_api_key

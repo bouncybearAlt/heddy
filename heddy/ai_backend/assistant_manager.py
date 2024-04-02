@@ -17,6 +17,7 @@ from openai.types.beta.assistant_stream_event import (
     ThreadRunStepCancelled, ThreadRunStepDelta)
 from dataclasses import dataclass
 from heddy.io.sound_effects_player import AudioPlayer
+from heddy.vision_module import VisionModule
 
 class AssistantResultStatus(Enum):
     SUCCESS = 1
@@ -108,6 +109,24 @@ def tool_call_zapier(arguments):
             return f"Failed with status code: {response.status_code}"
     except Exception as e:
         return f"Exception occurred: {str(e)}"
+    
+def retrieve_image_description(arguments):
+    # Parse the arguments as JSON if it's a string
+    if isinstance(arguments, str):
+        arguments = json.loads(arguments)
+    
+    # Access the 'message' key
+    message = arguments.get('message', '')
+    
+    # Create an instance of VisionModule and get the stored image description
+    vision_module = VisionModule()  # Assuming VisionModule is modified to not require openai_api_key during initialization
+    image_description = vision_module.get_stored_image_description()  # Get the stored description
+    
+    # Append the image description to the message
+    message += "\n\nImage Description: " + image_description
+    
+    # Return the updated message
+    return message
     
 class ThreadManager:
     def __init__(self, client):
@@ -211,6 +230,12 @@ class StreamingManager:
                         "output": output,
                         "tool_call_id": call.id
                     })
+                elif func.name == "send_image_description":
+                    output = retrieve_image_description(func.arguments)
+                    outputs.append({
+                        "output": output,
+                        "tool_call_id": call.id
+                    })
                 else:
                     raise NotImplementedError(f"{func.name=}")
             
@@ -274,38 +299,3 @@ class StreamingManager:
             event.status = ProcessingStatus.SUCCESS
             event.result = text
         return event
-
-
-# hreadRunRequiresAction(
-#     data=Run(
-#         id='run_CxIXx8QhzXdKmxeuWD4w5wqD',
-#         assistant_id='asst_3D8tACoidstqhbw5JE2Et2st',
-#         cancelled_at=None,
-#         completed_at=None,
-#         created_at=1711643758,
-#         expires_at=1711644358,
-#         failed_at=None, file_ids=[],
-#         instructions='Keep answers to max 3 sentences.\n\ndon\'t use non-standard formatting, write it to be read aloud.\n\nmake funny noises in every sentence to drive home your point, really go to town on it.\n\nKeep texts using zapier to 65 characters or less - BUT\ndon\'t send a text unless I specifically say the word "text" and clearly am talking about am SMS in particular\n\nIgnore the word reply, and understand the beginning gets cut off, as this is a bug in my application\n\nUse 18th century slang as much as possible.\n',
-#         last_error=None,
-#         metadata={},
-#         model='gpt-4-turbo-preview',
-#         object='thread.run',
-#         required_action=RequiredAction(
-#             submit_tool_outputs=RequiredActionSubmitToolOutputs(
-#                 tool_calls=[
-#                     RequiredActionFunctionToolCall(
-#                         id='call_AFw0Va6fqQ5wpHiGYmZL5Goc',
-#                         function=Function(
-#                             arguments='{"message":"hello, world"}',
-#                             name='send_text_message'),
-#                             type='function')
-#                             ]),
-#             type='submit_tool_outputs'
-#         ),
-            
-#         started_at=1711643758,
-#         status='requires_action',
-#         thread_id='thread_9MnWmWO0RELGUIqAB6h5ttIM',
-#         tools=[CodeInterpreterTool(type='code_interpreter'),
-#                 RetrievalTool(type='retrieval'),
-#                 FunctionTool(function=FunctionDefinition(name='send_text_message', description='Sends a text message via Zapier', parameters={'type': 'object', 'properties': {'message': {'type': 'string', 'description': 'The message to send'}}, 'required': ['message']}), type='function')], usage=None), event='thread.run.requires_action')
