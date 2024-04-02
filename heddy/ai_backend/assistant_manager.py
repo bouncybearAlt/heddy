@@ -88,9 +88,27 @@ class EventHandler(AssistantEventHandler):
                         print(f"\n{output.logs}", flush=True)
 
 
-def tool_call_zapier(arguments):
-    return "Success!"
 
+def tool_call_zapier(arguments):
+    webhook_url = "https://hooks.zapier.com/hooks/catch/82343/19816978ac224264aa3eec6c8c911e10/"
+    
+    # Parse the arguments as JSON if it's a string
+    if isinstance(arguments, str):
+        arguments = json.loads(arguments)
+    
+    # Access the 'message' key instead of 'text'
+    text_to_send = arguments.get('message', '')  # Default to empty string if 'message' not found
+    
+    payload = {"text": text_to_send}
+    try:
+        response = requests.post(webhook_url, json=payload)
+        if response.status_code == 200:
+            return "Success!"
+        else:
+            return f"Failed with status code: {response.status_code}"
+    except Exception as e:
+        return f"Exception occurred: {str(e)}"
+    
 class ThreadManager:
     def __init__(self, client):
         self.client = client
