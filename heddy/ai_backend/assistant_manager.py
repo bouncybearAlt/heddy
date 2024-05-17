@@ -36,24 +36,6 @@ class AssitsantResult:
     calls: Optional[Any] = None
     error: Optional[str] = ""
     
-def retrieve_image_description(arguments):
-    # Parse the arguments as JSON if it's a string
-    if isinstance(arguments, str):
-        arguments = json.loads(arguments)
-    
-    # Access the 'message' key
-    message = arguments.get('message', '')
-    
-    # Create an instance of VisionModule and get the stored image description
-    vision_module = VisionModule()  # Assuming VisionModule is modified to not require openai_api_key during initialization
-    image_description = vision_module.get_stored_image_description()  # Get the stored description
-    
-    # Append the image description to the message
-    message += "\n\nImage Description: " + image_description
-    
-    # Return the updated message
-    return message
-    
 class ThreadManager:
     def __init__(self, client):
         self.client = client
