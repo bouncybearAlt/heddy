@@ -17,6 +17,7 @@ from openai.types.beta.assistant_stream_event import (
     ThreadRunStepCancelled, ThreadRunStepDelta)
 from dataclasses import dataclass
 from heddy.io.sound_effects_player import AudioPlayer
+from heddy.utils import encode_image_to_base64
 from heddy.vision_module import VisionModule
 
 class AssistantResultStatus(Enum):
@@ -75,6 +76,38 @@ class ThreadManager:
             print(f"Message added to thread: {self.thread_id}")
         except Exception as e:
             print(f"Failed to add message to thread: {e}")
+
+    def get_image_description(self, transcription, base64_image):
+        """Sends the base64-encoded image along with the transcription to the OpenAI API and returns the description."""
+        if base64_image:
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {self.client.api_key}"
+            }
+
+            payload = {
+                "model": "gpt-4-vision-preview",
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": transcription},  # Use transcription as the prompt
+                            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{base64_image}"}}
+                        ]
+                    }
+                ],
+                "max_tokens": 300
+            }
+
+            response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+            if response.status_code == 200:
+                try:
+                    return response.json()['choices'][0]['message']['content']
+                except KeyError:
+                    return "Description not available or wrong response format."
+            else:
+                print(f"Error in OpenAI API call: {response.text}")
+        return "Failed to encode image or image capture failed."
 
     def handle_interaction(self, content):
         if not self.thread_id or not self.interaction_in_progress:
@@ -206,6 +239,14 @@ class StreamingManager:
         
         content = event.request
         if event.type == ApplicationEventType.AI_INTERACT:
+            if "image" in content:
+                content = self.thread_manager.get_image_description(
+                    content["text"],
+                    encode_image_to_base64(content["image"])
+                )
+                print(content)
+            else:
+                content = content["text"]
             self.text = ""
             self.thread_manager.add_message_to_thread(content)
             manager = openai.beta.threads.runs.create_and_stream(

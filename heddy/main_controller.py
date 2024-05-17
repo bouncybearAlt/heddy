@@ -100,12 +100,12 @@ class MainController:
             if self.picture_mode:
                 return ApplicationEvent(
                     type=ApplicationEventType.GET_SNAPSHOT,
-                    request=event.result
+                    request={"text": event.result},
                 )
             else:
                 return ApplicationEvent(
                 type=ApplicationEventType.AI_INTERACT,
-                request=event.result
+                request={"text": event.result}
             )
         if event.type == ApplicationEventType.GET_SNAPSHOT:
             self.picture_mode = False
@@ -148,7 +148,7 @@ class MainController:
     
     def get_snapshot(self, event: ApplicationEvent):
         # TODO: move to vision module logic
-        event.result = self.vision_module.get_description_of_camera_view(event.request)
+        event = self.vision_module.handle_image_request(event)
         return event
 
     # TODO: move to an interaction manager(?) module
@@ -216,7 +216,7 @@ def initialize(args):
 
     # Initialize ThreadManager and StreamingManager
     thread_manager = ThreadManager(openai_client)
-    streaming_manager = StreamingManager(thread_manager, eleven_labs_manager, assistant_id="asst_3D8tACoidstqhbw5JE2Et2st")
+    streaming_manager = StreamingManager(thread_manager, eleven_labs_manager, assistant_id="asst_UOLV7kH9MF8nouZ9fOY9lFAa") #original "asst_3D8tACoidstqhbw5JE2Et2st")
 
     word_detector = WordDetector()
     return MainController(
